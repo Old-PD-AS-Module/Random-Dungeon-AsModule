@@ -105,6 +105,7 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 		
 		
 		BitmapCache.context = TextureCache.context = instance  = this;
+		LocalizationManager.getInstance().init(getAssets(), "zh");
 		
 		DisplayMetrics m = new DisplayMetrics();
 		dispHeight = m.heightPixels;

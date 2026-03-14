@@ -1,0 +1,5 @@
+apply plugin: 'java-library'
+
+dependencies {
+    implementation 'org.smali:dexlib2:2.2.6'
+}

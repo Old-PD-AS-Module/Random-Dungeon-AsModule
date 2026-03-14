@@ -16,3 +16,15 @@ android {
         }
     }
 }
+
+dependencies {
+    implementation project(':dex-injector-lib')
+}
+
+task injectDex(type: JavaExec) {
+    classpath = files("$buildDir/intermediates/classes/debug", project(':dex-injector-lib').buildDir.path + '/libs/dex-injector-lib.jar')
+    main = 'com.example.localizationinjector.DexInjector'
+    args 'app/src/main/assets/classes.dex', 'app/src/main/assets/classes-modified.dex'
+}
+
+preBuild.dependsOn injectDex

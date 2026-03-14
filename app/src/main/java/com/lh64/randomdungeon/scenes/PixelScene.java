@@ -19,6 +19,8 @@ package com.lh64.randomdungeon.scenes;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.opengl.GLES20;
 
 import com.lh64.input.Touchscreen;
@@ -101,10 +103,13 @@ public class PixelScene extends Scene {
 		Camera.add( uiCamera );
 		
 		if (font1x == null) {
+
+			Typeface typeface = Typeface.createFromAsset(Game.instance.getAssets(), "fonts/DroidSansFallback.ttf");
+			font1x = new Font(typeface, 12, Color.WHITE);
 			
 			// 3x5 (6)
-			font1x = Font.colorMarked( 
-				BitmapCache.get( Assets.FONTS1X ), 0x00000000, BitmapText.Font.LATIN_FULL );
+			//font1x = Font.colorMarked(
+			//	BitmapCache.get( Assets.FONTS1X ), 0x00000000, BitmapText.Font.LATIN_FULL );
 			font1x.baseLine = 6;
 			font1x.tracking = -1;
 			
@@ -256,7 +261,7 @@ public class PixelScene extends Scene {
 			fadeIn( 0xFF000000, false );
 		}
 	}
-	
+
 	protected void fadeIn( int color, boolean light ) {
 		add( new Fader( color, light ) );
 	}
