@@ -1,1 +1,1 @@
-include ':app', ':dex-injector-lib'
+include ':app'
