@@ -29,7 +29,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
-import com.lh64.glwrap.Texture;
 
 public class BitmapText extends Visual {
 
@@ -108,20 +107,20 @@ public class BitmapText extends Visual {
 			float h = font.height( rect );
 			vertices[0] = width;
 			vertices[1] = 0;
-			vertices[2] = rect.left;
-			vertices[3] = rect.top;
+			vertices[2] = rect.left / font.texture.width();
+			vertices[3] = rect.top / font.texture.height();
 			vertices[4] = width + w;
 			vertices[5] = 0;
-			vertices[6] = rect.right;
-			vertices[7] = rect.top;
+			vertices[6] = rect.right / font.texture.width();
+			vertices[7] = rect.top / font.texture.height();
 			vertices[8] = width + w;
 			vertices[9] = h;
-			vertices[10] = rect.right;
-			vertices[11] = rect.bottom;
+			vertices[10] = rect.right / font.texture.width();
+			vertices[11] = rect.bottom / font.texture.height();
 			vertices[12] = width;
 			vertices[13] = h;
-			vertices[14] = rect.left;
-			vertices[15] = rect.bottom;
+			vertices[14] = rect.left / font.texture.width();
+			vertices[15] = rect.bottom / font.texture.height();
 			quads.put( vertices );
 			realLength++;
 			width += w + font.tracking;
@@ -178,7 +177,10 @@ public class BitmapText extends Visual {
 	}
 
 	public static class Font extends TextureFilm {
-		public SmartTexture texture;
+
+		public static final String LATIN_FULL =
+			" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
 		public float tracking = 0;
 		public float baseLine;
 		public boolean autoUppercase = false;
@@ -197,7 +199,6 @@ public class BitmapText extends Visual {
 
 		public Font(SmartTexture tx, HashMap<Character, RectF> charMap, float lineHeight, float baseLine, float tracking) {
 			super(tx);
-			this.texture = tx;
 			if (charMap != null) {
 			    this.frames.putAll(charMap);
 			}
@@ -207,7 +208,7 @@ public class BitmapText extends Visual {
 		}
 
 		public Font(Typeface typeface, int size, int color) {
-			super(null);
+			super((SmartTexture)null);
 			this.typeface = typeface;
 			this.paint = new Paint();
 			this.paint.setTypeface(typeface);
@@ -219,17 +220,7 @@ public class BitmapText extends Visual {
 
 			this.bitmap = Bitmap.createBitmap(textureSize, textureSize, config);
 			this.canvas = new Canvas(this.bitmap);
-
-			int[] textureIds = new int[1];
-			GLES20.glGenTextures(1, textureIds, 0);
-			GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIds[0]);
-
-			GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
-			GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-
-			GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, this.bitmap, 0);
-
-			this.texture = new SmartTexture(new Texture(textureIds[0], textureSize, textureSize));
+			this.texture = new SmartTexture(this.bitmap);
 		}
 
 		@Override
@@ -252,25 +243,45 @@ public class BitmapText extends Visual {
 				lineHeightTex = 0;
 			}
 			if (nextY + charHeight > textureSize) {
-				// Texture is full
 				return null;
 			}
 			if (charHeight > lineHeightTex) {
 				lineHeightTex = (int)Math.ceil(charHeight);
 			}
 
-			canvas.drawText(String.valueOf(ch), nextX, nextY - fm.top, paint);
+			Bitmap glyphBitmap = Bitmap.createBitmap((int)Math.ceil(charWidth), (int)Math.ceil(charHeight), config);
+			Canvas glyphCanvas = new Canvas(glyphBitmap);
+			glyphCanvas.drawText(String.valueOf(ch), 0, -fm.top, paint);
+
+			texture.bind();
+			GLUtils.texSubImage2D(GLES20.GL_TEXTURE_2D, 0, nextX, nextY, glyphBitmap);
 
 			RectF rect = new RectF(nextX, nextY, nextX + charWidth, nextY + charHeight);
 			frames.put(ch, rect);
 
-			GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture.glTexture().id);
-			GLUtils.texSubImage2D(GLES20.GL_TEXTURE_2D, 0, nextX, nextY,
-					Bitmap.createBitmap(bitmap, nextX, nextY, (int)charWidth, (int)charHeight));
-
 			nextX += Math.ceil(charWidth);
+			glyphBitmap.recycle();
 
 			return rect;
+		}
+
+		public static Font colorMarked( Bitmap bmp, int height, int color, String chars ) {
+			SmartTexture tx = new SmartTexture( bmp );
+			HashMap<Character, RectF> map = new HashMap<Character, RectF>();
+			int[] pixels = new int[bmp.getWidth()];
+			
+			int pos = 0;
+			for (int i=0; i < chars.length(); i++) {
+				bmp.getPixels( pixels, 0, bmp.getWidth(), pos, height, 1, 1 );
+				int j = 0;
+				while (j < pixels.length && pixels[j] != color) {
+					j++;
+				}
+				map.put( chars.charAt(i), new RectF( pos, 0, j, height ) );
+				pos = j + 1;
+			}
+			
+			return new Font( tx, map, height, height, 1 );
 		}
 	}
 }
